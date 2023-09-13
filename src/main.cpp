@@ -31,6 +31,14 @@ attribute_t *attribute_ref;
 attribute_t *attribute_ref2;
 attribute_t *attribute_ref3;
 
+endpoint_t *endpoint1;
+endpoint_t *endpoint2;
+endpoint_t *endpoint3;
+
+esp_err_t   attribute_save;
+esp_err_t   attribute_save2;
+esp_err_t   attribute_save3;
+
  static void on_device_event(const ChipDeviceEvent *event, intptr_t arg) {}
 
 
@@ -87,13 +95,14 @@ void setup() {
   //TEMPERATURE
   temperature_sensor::config_t temp_config;
   temp_config.temperature_measurement.measured_value = temperature ;
-  endpoint_t *endpoint = temperature_sensor::create(node, &temp_config, ENDPOINT_FLAG_NONE, NULL);
+  
+  endpoint1 = temperature_sensor::create(node, &temp_config, ENDPOINT_FLAG_NONE, NULL);
 
 
   //HUMIDITY
   humidity_sensor::config_t hum_config;
   hum_config.relative_humidity_measurement.measured_value = humidity;
-  endpoint_t *endpoint2 = humidity_sensor::create(node, &hum_config, ENDPOINT_FLAG_NONE, NULL);
+  endpoint2 = humidity_sensor::create(node, &hum_config, ENDPOINT_FLAG_NONE, NULL);
 
 
   //CO2
@@ -102,12 +111,12 @@ void setup() {
   endpoint_t *endpoint3 = pressure_sensor::create(node, &co2_config, ENDPOINT_FLAG_NONE, NULL);
 
   // Save on/off attribute reference. It will be used to read attribute value later.
-  attribute_ref = attribute::get(cluster::get(endpoint, CLUSTER_ID), ATTRIBUTE_ID);
+  attribute_ref = attribute::get(cluster::get(endpoint1, CLUSTER_ID), ATTRIBUTE_ID);
   attribute_ref2 = attribute::get(cluster::get(endpoint2, CLUSTER_ID2), ATTRIBUTE_ID2);
   attribute_ref3 = attribute::get(cluster::get(endpoint3, CLUSTER_ID3), ATTRIBUTE_ID3);
 
   // Save generated endpoint id
-  temperature_endpoint_id = endpoint::get_id(endpoint);
+  temperature_endpoint_id = endpoint::get_id(endpoint1);
   humidity_endpoint_id = endpoint::get_id(endpoint2);
   co2_endpoint_id = endpoint::get_id(endpoint3);
   // Setup DAC (this is good place to also set custom commission data, passcodes etc.)
@@ -199,6 +208,18 @@ void loop() {
         Serial.print("\t");
         Serial.print("Humidity:");
         Serial.println(humidity);
+        esp_matter_attr_val_t temper;
+        temper.type = ESP_MATTER_VAL_TYPE_NULLABLE_FLOAT;
+        temper.val.f = temperature;
+        esp_matter_attr_val_t hum;
+        hum.type = ESP_MATTER_VAL_TYPE_NULLABLE_FLOAT;
+        hum.val.f = humidity;
+        esp_matter_attr_val_t air;
+        air.type = ESP_MATTER_VAL_TYPE_NULLABLE_UINT16;
+        air.val.u16 = co2;
+        attribute_save = attribute::set_val(attribute_ref, &temper);
+        attribute_save2 = attribute::set_val(attribute_ref, &hum);
+        attribute_save3 = attribute::set_val(attribute_ref, &air);
     }
 }
 
