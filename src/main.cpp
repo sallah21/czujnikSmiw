@@ -126,8 +126,6 @@ void setup() {
   esp_matter::start(on_device_event);
 
 
-
-
   Serial.begin(115200);
     while (!Serial) {
         delay(100);
@@ -209,17 +207,17 @@ void loop() {
         Serial.print("Humidity:");
         Serial.println(humidity);
         esp_matter_attr_val_t temper;
-        temper.type = ESP_MATTER_VAL_TYPE_NULLABLE_FLOAT;
-        temper.val.f = temperature;
+        temper.type = ESP_MATTER_VAL_TYPE_NULLABLE_UINT16;
+        temper.val.u16 = 100*temperature;
         esp_matter_attr_val_t hum;
-        hum.type = ESP_MATTER_VAL_TYPE_NULLABLE_FLOAT;
-        hum.val.f = humidity;
+        hum.type = ESP_MATTER_VAL_TYPE_NULLABLE_UINT16;
+        hum.val.u16 = 100*humidity;
         esp_matter_attr_val_t air;
         air.type = ESP_MATTER_VAL_TYPE_NULLABLE_UINT16;
-        air.val.u16 = co2;
+        air.val.u16 = 10*co2;
         attribute_save = attribute::set_val(attribute_ref, &temper);
-        attribute_save2 = attribute::set_val(attribute_ref, &hum);
-        attribute_save3 = attribute::set_val(attribute_ref, &air);
+        attribute_save2 = attribute::set_val(attribute_ref2, &hum);
+        attribute_save3 = attribute::set_val(attribute_ref3, &air);
     }
 }
 
