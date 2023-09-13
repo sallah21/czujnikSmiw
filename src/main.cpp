@@ -11,22 +11,29 @@ using namespace esp_matter::endpoint;
 
 SensirionI2CScd4x scd4x;
 
-// Please configure your PINs
-const int LED_PIN = 2;
-const int TOGGLE_BUTTON_PIN = 0;
-
-// Debounce for toggle button
-const int DEBOUNCE_DELAY = 500;
-int last_toggle;
 
 // Cluster and attribute ID used by Matter light device
-const uint32_t CLUSTER_ID = OnOff::Id;
-const uint32_t ATTRIBUTE_ID = OnOff::Attributes::OnOff::Id;
+const uint32_t CLUSTER_ID = TemperatureMeasurement::Id; //OnOff::Id;
+const uint32_t ATTRIBUTE_ID =TemperatureMeasurement::Attributes::MeasuredValue::Id;///OnOff::Attributes::OnOff::Id; 
 
-uint16_t light_endpoint_id = 0;
+const uint32_t CLUSTER_ID2 = RelativeHumidityMeasurement::Id; //OnOff::Id;
+const uint32_t ATTRIBUTE_ID2 = RelativeHumidityMeasurement::Attributes::MeasuredValue::Id;
+
+const uint32_t CLUSTER_ID3 = PressureMeasurement::Id; //OnOff::Id;
+const uint32_t ATTRIBUTE_ID3 =PressureMeasurement::Attributes::MeasuredValue::Id;
+
+uint16_t temperature_endpoint_id = 1;
+uint16_t humidity_endpoint_id = 2;
+uint16_t co2_endpoint_id = 3;
+
+
 attribute_t *attribute_ref;
+attribute_t *attribute_ref2;
+attribute_t *attribute_ref3;
 
  static void on_device_event(const ChipDeviceEvent *event, intptr_t arg) {}
+
+
 static esp_err_t on_identification(identification::callback_type_t type, uint16_t endpoint_id,
                                    uint8_t effect_id, uint8_t effect_variant, void *priv_data) {
   return ESP_OK;
@@ -37,7 +44,7 @@ static esp_err_t on_identification(identification::callback_type_t type, uint16_
 // if it matches light attribute. If yes, LED changes state to new one.
 static esp_err_t on_attribute_update(attribute::callback_type_t type, uint16_t endpoint_id, uint32_t cluster_id,
                                      uint32_t attribute_id, esp_matter_attr_val_t *val, void *priv_data) {
-  
+  Serial.print("matter updated");
   return ESP_OK;
 }
 
@@ -56,34 +63,62 @@ void printSerialNumber(uint16_t serial0, uint16_t serial1, uint16_t serial2) {
     Serial.println();
 }
 
+uint16_t co2 = 0;
+float temperature = 0.0f;
+float humidity = 0.0f;
+
+
 void setup() {
   // put your setup code here, to run once:
 
 
   // Enable debug logging
-  //esp_log_level_set("*", ESP_LOG_DEBUG);
+  esp_log_level_set("*", ESP_LOG_DEBUG);
 
   // Setup Matter node
   node::config_t node_config;
   node_t *node = node::create(&node_config, on_attribute_update, on_identification);
 
   // // Setup Light endpoint / cluster / attributes with default values
-  on_off_light::config_t light_config;
-  light_config.on_off.on_off = false;
-  light_config.on_off.lighting.start_up_on_off = false;
-  endpoint_t *endpoint = on_off_light::create(node, &light_config, ENDPOINT_FLAG_NONE, NULL);
+  //on_off_light::config_t light_config;
+    //light_config.on_off.on_off = false;
+  //light_config.on_off.lighting.start_up_on_off = false;
+
+  //TEMPERATURE
+  temperature_sensor::config_t temp_config;
+  temp_config.temperature_measurement.measured_value = temperature ;
+  endpoint_t *endpoint = temperature_sensor::create(node, &temp_config, ENDPOINT_FLAG_NONE, NULL);
+
+
+  //HUMIDITY
+  humidity_sensor::config_t hum_config;
+  hum_config.relative_humidity_measurement.measured_value = humidity;
+  endpoint_t *endpoint2 = humidity_sensor::create(node, &hum_config, ENDPOINT_FLAG_NONE, NULL);
+
+
+  //CO2
+  pressure_sensor::config_t co2_config;
+  co2_config.pressure_measurement.pressure_measured_value = co2;
+  endpoint_t *endpoint3 = pressure_sensor::create(node, &co2_config, ENDPOINT_FLAG_NONE, NULL);
 
   // Save on/off attribute reference. It will be used to read attribute value later.
   attribute_ref = attribute::get(cluster::get(endpoint, CLUSTER_ID), ATTRIBUTE_ID);
+  attribute_ref2 = attribute::get(cluster::get(endpoint2, CLUSTER_ID2), ATTRIBUTE_ID2);
+  attribute_ref3 = attribute::get(cluster::get(endpoint3, CLUSTER_ID3), ATTRIBUTE_ID3);
 
   // Save generated endpoint id
-  light_endpoint_id = endpoint::get_id(endpoint);
-  
+  temperature_endpoint_id = endpoint::get_id(endpoint);
+  humidity_endpoint_id = endpoint::get_id(endpoint2);
+  co2_endpoint_id = endpoint::get_id(endpoint3);
   // Setup DAC (this is good place to also set custom commission data, passcodes etc.)
   //esp_matter::set_custom_dac_provider(chip::Credentials::Examples::GetExampleDACProvider());
 
   // Start Matter device
   esp_matter::start(on_device_event);
+
+
+
+
   Serial.begin(115200);
     while (!Serial) {
         delay(100);
@@ -136,9 +171,7 @@ void loop() {
     delay(100);
 
     // Read Measurement
-    uint16_t co2 = 0;
-    float temperature = 0.0f;
-    float humidity = 0.0f;
+
     bool isDataReady = false;
     error = scd4x.getDataReadyFlag(isDataReady);
     if (error) {
