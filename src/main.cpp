@@ -56,6 +56,7 @@ static esp_err_t on_attribute_update(attribute::callback_type_t type, uint16_t e
   return ESP_OK;
 }
 
+
 void printUint16Hex(uint16_t value) {
     Serial.print(value < 4096 ? "0" : "");
     Serial.print(value < 256 ? "0" : "");
@@ -215,9 +216,9 @@ void loop() {
         esp_matter_attr_val_t air;
         air.type = ESP_MATTER_VAL_TYPE_NULLABLE_UINT16;
         air.val.u16 = 10*co2;
-        attribute_save = attribute::set_val(attribute_ref, &temper);
-        attribute_save2 = attribute::set_val(attribute_ref2, &hum);
-        attribute_save3 = attribute::set_val(attribute_ref3, &air);
+        attribute_save = attribute::update(temperature_endpoint_id,CLUSTER_ID, ATTRIBUTE_ID, &temper);
+        attribute_save2 = attribute::update(humidity_endpoint_id,CLUSTER_ID2, ATTRIBUTE_ID2, &hum);
+        attribute_save3 = attribute::update(co2_endpoint_id,CLUSTER_ID3, ATTRIBUTE_ID3, &air);
     }
 }
 
